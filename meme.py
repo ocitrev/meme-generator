@@ -131,7 +131,7 @@ def draw_meme_text(image, line1, line2):
     text_color = (255, 255, 255)
     margin = image.height * 0.04
 
-    if line1 and line2:
+    if line2 is not None:
         top = line1
         bottom = line2
     elif line1:
