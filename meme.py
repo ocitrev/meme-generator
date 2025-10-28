@@ -75,14 +75,14 @@ class StringIgnoreCase(str):
         return self.casefold() == other.casefold()
 
 
-def get_clipboard_format(image_type):
-    if StringIgnoreCase(image_type) == 'PNG':
+def get_clipboard_format(image_type: StringIgnoreCase):
+    if image_type == 'png':
         return Win32.RegisterClipboardFormat('PNG')
-    elif StringIgnoreCase(image_type) == 'BMP':
+    elif image_type == 'bmp':
         return Win32.CF_DIB
 
 
-def send_to_clipboard(image_type, data):
+def send_to_clipboard(image_type: StringIgnoreCase, data):
     Win32.OpenClipboard(None)
     try:
         Win32.EmptyClipboard()
@@ -182,28 +182,22 @@ def draw_meme_text(image, line1, line2):
         draw_emoji_text(TOP, margin, top)
 
 
-def save_meme_to_clipboard(image_path, line1, line2, image_type):
+def save_meme_to_clipboard(image_path, line1, line2, image_type: StringIgnoreCase):
     image = Image.open(image_path)
     draw_meme_text(image, line1=line1, line2=line2)
 
-    if (t := StringIgnoreCase(image_type)) == 'BMP':
+    if image_type == 'bmp':
         with BytesIO() as output:
             image.convert("RGB").save(output, 'BMP')
             data = output.getvalue()[14:]
-    elif t == 'PNG':
+    elif image_type == 'png':
         with BytesIO() as output:
             image.convert("RGB").save(output, 'PNG')
             data = output.getvalue()
     else:
         assert False, f'Unsupported image type: {image_type}'
 
-    send_to_clipboard(t, data)
-
-
-def ImageType(value):
-    if StringIgnoreCase(value) in ['PNG', 'BMP']:
-        return value
-    raise argparse.ArgumentTypeError(f'Unsupported image type: {value}')
+    send_to_clipboard(image_type, data)
 
 
 def main():
@@ -211,10 +205,20 @@ def main():
     parser = argparse.ArgumentParser(description='Meme Generator')
     parser.add_argument('line1', type=str, help='line 1')
     parser.add_argument('line2', nargs='?', type=str, help='line 2')
-    parser.add_argument('-i', '--image', type=str, default=default_image, help=f'Image file path, default: {default_image}')
-    parser.add_argument('-t','--type', type=ImageType, default='BMP', help='Image file type, default: BMP, options: PNG, BMP')
+    parser.add_argument('-i', '--image', type=str, default=default_image, help='Image file path (default: %(default)s)')
+
+    output_group = parser.add_mutually_exclusive_group()
+    output_group.add_argument('-t', '--type', type=StringIgnoreCase, default='bmp', choices=('bmp', 'png'), help='Type of image to save in the clipboard (default: %(default)s)')
+    output_group.add_argument('-o', '--output', type=str, help='Save image to specified file instead of the clipboard')
+
     args = parser.parse_args()
-    save_meme_to_clipboard(args.image, args.line1, args.line2, args.type)
+
+    if args.output:
+        image = Image.open(args.image)
+        draw_meme_text(image, line1=args.line1, line2=args.line2)
+        image.save(args.output)
+    else:
+        save_meme_to_clipboard(args.image, args.line1, args.line2, args.type)
 
 
 if __name__ == '__main__':
